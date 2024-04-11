@@ -69,7 +69,7 @@ public interface FQNResolver {
                     }
                 }
 
-            } else if (c == ':') {
+            } else if (c == ':' || c == '+' || c == '-') {
                 sb.append(BytecodeSignatureEnum.decode(String.valueOf(c)));
                 if (genericSignature.charAt(i + 1) == ':') {
                     i++;

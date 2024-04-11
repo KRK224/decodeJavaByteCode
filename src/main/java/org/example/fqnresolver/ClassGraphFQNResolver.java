@@ -89,18 +89,33 @@ public class ClassGraphFQNResolver {
         return methodFQNList;
     }
 
+    public List<String> getMethodSignatureListByClassFQN(String classFQN) {
+        ClassInfo classInfoByClassFQN = getClassInfoByClassFQN(classFQN);
+        List<String> methodSignatureList = new ArrayList<>();
+
+        classInfoByClassFQN.getMethodInfo().forEach(methodInfo -> {
+            String methodSignature = getDecodedMethodSignature(methodInfo);
+            methodSignatureList.add(methodSignature);
+        });
+        return methodSignatureList;
+    }
+
 
     private String getDecodedMethodSignature(MethodInfo methodInfo) {
         String methodSignature = methodInfo.getTypeSignatureOrTypeDescriptorStr();
         String methodName = methodInfo.getName();
-
-        return FQNResolver.decodeMethodSignature(methodSignature, methodName);
+        System.out.println("coded methodSignature = " + methodSignature);
+        String decodedMethodSignature = FQNResolver.decodeMethodSignature(methodSignature,
+            methodName);
+        System.out.println("decodedMethodSignature = " + decodedMethodSignature);
+        return decodedMethodSignature;
     }
 
     private String getMethodFQN(MethodInfo methodInfo) {
         String className = methodInfo.getClassName();
         String methodName = methodInfo.getName();
         String methodSignature = methodInfo.getTypeSignatureOrTypeDescriptorStr();
+        System.out.println("coded methodSignature = " + methodSignature);
 
         int parameterStartIndex = methodSignature.indexOf("(");
         int parameterEndIndex = methodSignature.indexOf(")");
@@ -108,6 +123,7 @@ public class ClassGraphFQNResolver {
         String parameters = methodSignature.substring(parameterStartIndex + 1, parameterEndIndex);
         String decodedGenericParams = FQNResolver.decodeGenericSignature(parameters, false);
         String methodFQN = className + "." + methodName + "(" + decodedGenericParams + ")";
+        System.out.println("decoded methodFQN = " + methodFQN);
         return methodFQN.replace("$", ".");
     }
 

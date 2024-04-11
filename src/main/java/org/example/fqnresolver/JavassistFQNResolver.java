@@ -16,7 +16,7 @@ public class JavassistFQNResolver implements FQNResolver {
 
     private ClassPool pool = ClassPool.getDefault();
 
-    public JavassistFQNResolver(String... classpath) throws NotFoundException {
+    public JavassistFQNResolver(List<String> classpath) throws NotFoundException {
         // Add classpath to the classpool
         for (String path : classpath) {
             pool.insertClassPath(path);
