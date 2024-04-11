@@ -1,5 +1,10 @@
 package org.example;
 
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.MethodInfo;
+import io.github.classgraph.MethodParameterInfo;
+import io.github.classgraph.ScanResult;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -20,15 +25,63 @@ public class Main {
 //            JsonObject jsonObject = new JsonObject();
 
             ClassPool pool = ClassPool.getDefault();
+
 //            pool.appendClassPath(new LoaderClassPath(classLoader));
 
             String evictorJarPath = "/Users/krk224/Documents/Tmax/1_source/Projects/evictor-1.0.0.jar";
             String gsonJarPath = "/Users/krk224/.m2/repository/com/google/code/gson/gson/2.9.0/gson-2.9.0.jar";
             String superPxJarPath = "/Users/krk224/Documents/Tmax/1_source/test-px/build/libs/super-px-0.2.2.hotfix1.jar";
 
+//            getClassFQNListByJarPath(superPxJarPath);
+
+            /**
+             * ClassGraph를 이용하여 클래스 정보를 스캔한다.
+             **/
+            ClassGraph cg = new ClassGraph().verbose().overrideClasspath(evictorJarPath)
+                .enableFieldInfo().enableMethodInfo().ignoreClassVisibility()
+                .ignoreMethodVisibility().ignoreFieldVisibility()
+                .acceptPackages("com.stoyanr.evictor.map");
+
+            try (ScanResult scanResult = cg.scan()) {
+
+                scanResult.getAllClasses().forEach(classInfo -> {
+                    System.out.println("------------------------------------");
+                    System.out.println("classInfo = " + classInfo.getName());
+
+                    if (classInfo.getTypeSignatureStr() != null) {
+                        System.out.println(
+                            "classInfo.getTypeSignatureStr() = " + classInfo.getTypeSignatureStr());
+                    }
+
+                    classInfo.getMethodInfo().forEach(methodInfo -> {
+                        System.out.println(
+                            "methodInfo.getClassName() = " + methodInfo.getClassName());
+                        // TypeSignature는 Generic Type이 포함된 경우 나오고, TypeDescriptor는 Generic Type이 포함되지 않은 경우 나온다.
+                        System.out.println(
+                            "methodInfo = " + methodInfo.getName() + ", signature = "
+                                + methodInfo.getTypeSignatureOrTypeDescriptorStr()
+                        );
+                        System.out.println("decodedMethodSignature = " + getMethodFQN(methodInfo));
+//                        MethodParameterInfo[] parameterInfoList = methodInfo.getParameterInfo();
+//                        for (MethodParameterInfo parameterInfo : parameterInfoList) {
+//                            System.out.println(
+//                                "parameter type = "
+//                                    + parameterInfo.getTypeDescriptor());
+//                        }
+                    });
+
+                    classInfo.getFieldInfo().forEach(fieldInfo -> {
+                        System.out.println("fieldInfo = " + fieldInfo.getName() + ", type = "
+                            + fieldInfo.getTypeSignatureOrTypeDescriptorStr() + ", modifier = "
+                            + fieldInfo.getModifiersStr());
+                    });
+
+                });
+            }
+
 //            pool.insertClassPath(evictorJarPath);
 //            pool.insertClassPath(gsonJarPath);
-            pool.insertClassPath(superPxJarPath);
+//            pool.insertClassPath(superPxJarPath);
 
             /**
              * 현재 ClassLoader에 로드 된 package 목록 출력
@@ -63,13 +116,13 @@ public class Main {
 
 //            printMethod(pool, evictorClass);
 //            System.out.println("=====================================");
-            printMethod(pool, gsonClass);
+//            printMethod(pool, gsonClass);
 //            System.out.println("=====================================");
 //            printMethod(pool, javaParserClass);
 //            System.out.println("=====================================");
 //            printMethod(pool, superappClass);
 
-            printFieldInClass(pool, superappClass);
+//            printFieldInClass(pool, evictorClass);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -113,6 +166,7 @@ public class Main {
     public static void printMethod(ClassPool pool, String classFullQualifiedName) throws Exception {
         CtClass ctClass = pool.get(classFullQualifiedName);
         CtMethod[] ctMethods = ctClass.getDeclaredMethods();
+
         for (CtMethod ctMethod : ctMethods) {
             System.out.println("++++++++++++++++++++++");
             System.out.println(getDecodedMethodSignature(ctMethod));
@@ -121,6 +175,35 @@ public class Main {
             System.out.println("ctMethod fqn = " + getMethodFQN(ctClass, ctMethod));
             System.out.println("++++++++++++++++++++++");
         }
+    }
+
+
+    /**
+     * Jar 파일 내의 클래스들의 FQN 목록을 반환한다.
+     *
+     * @param jarPath
+     * @return
+     */
+    public static List<String> getClassFQNListByJarPath(String jarPath) {
+        List<String> classFQNList = new ArrayList<>();
+        try {
+            JarFile jarFile = new JarFile(jarPath);
+            Enumeration<JarEntry> entries = jarFile.entries();
+
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                String entryName = entry.getName();
+                if (entryName.endsWith(".class")) {
+                    String classFQN = entryName.replace("/", ".")
+                        .substring(0, entryName.length() - 6);
+                    classFQNList.add(classFQN);
+                    System.out.println("classFQN = " + classFQN);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return classFQNList;
     }
 
     /**
@@ -156,6 +239,12 @@ public class Main {
         return classFQNList;
     }
 
+    /**
+     * Method의 Signature를 디코딩하여 반환한다. TypeDef returnType methodSignature(params) 형식
+     *
+     * @param ctMethod
+     * @return
+     */
     public static String getDecodedMethodSignature(CtMethod ctMethod) {
         String signature = ctMethod.getGenericSignature();
 
@@ -281,7 +370,20 @@ public class Main {
         }
 
         return sb.toString();
+    }
 
+    public static String getMethodFQN(MethodInfo methodInfo) {
+        // Generic이 없으면 원래 값 반환함
+        String genericSignature = methodInfo.getTypeSignatureOrTypeDescriptorStr();
+        System.out.println("genericSignature = " + genericSignature);
+        int paramStartIdx = genericSignature.indexOf("(");
+        int paramEndIdx = genericSignature.indexOf(")");
+        String params = genericSignature.substring(paramStartIdx + 1, paramEndIdx);
+        String decodedGenericParams = decodeGenericSignature(params, false);
+        System.out.println("decodedGenericParams = " + decodedGenericParams);
+        String methodFQN = methodInfo.getClassName() + "." + methodInfo.getName() + "("
+            + decodedGenericParams + ")";
+        return methodFQN.replace("$", ".");
     }
 
 }

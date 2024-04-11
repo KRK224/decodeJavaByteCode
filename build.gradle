@@ -11,6 +11,8 @@ repositories {
 
 dependencies {
     implementation 'org.javassist:javassist:3.30.2-GA'
+    implementation group: 'io.github.classgraph', name: 'classgraph', version: '4.8.126'
+
 //    implementation('com.google.code.gson:gson:2.10.1')
     testImplementation platform('org.junit:junit-bom:5.9.1')
     testImplementation 'org.junit.jupiter:junit-jupiter'
