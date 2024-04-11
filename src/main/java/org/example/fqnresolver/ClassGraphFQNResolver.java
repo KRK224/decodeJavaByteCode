@@ -7,6 +7,11 @@ import io.github.classgraph.ScanResult;
 import java.util.ArrayList;
 import java.util.List;
 
+
+/**
+ * 우선 필요한 package만 그때 그때 scan해서 사용하는데 추후에는 자체 프로젝트 package와 외부 라이브러리에서 사용 중인 package 및 클래스만 사용하여
+ * classGraph 구성할 것
+ */
 public class ClassGraphFQNResolver {
 
     private List<String> classPathList;
@@ -34,7 +39,7 @@ public class ClassGraphFQNResolver {
         return classFQNList;
     }
 
-    public ClassInfo getClassInfoByClassFQN(String classFQN) {
+    private ClassInfo getClassInfoByClassFQN(String classFQN) {
         ClassGraph cg = new ClassGraph().enableClassInfo().enableFieldInfo().enableMethodInfo()
             .ignoreClassVisibility().ignoreFieldVisibility().ignoreFieldVisibility();
 

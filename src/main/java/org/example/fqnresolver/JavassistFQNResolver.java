@@ -8,6 +8,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import javassist.ClassPool;
 import javassist.CtClass;
+import javassist.CtField;
 import javassist.CtMethod;
 import javassist.NotFoundException;
 
@@ -68,7 +69,72 @@ public class JavassistFQNResolver implements FQNResolver {
         return classFQNList;
     }
 
-    public String getDecodedMethodSignature(CtMethod ctMethod) {
+    public List<String> getFieldFQNListByClassFQN(String classFQN) {
+        List<String> fieldFQNList = new ArrayList<>();
+        try {
+            CtClass ctClass = pool.get(classFQN);
+            CtField[] declaredFields = ctClass.getDeclaredFields();
+            for (CtField field : declaredFields) {
+                System.out.println("++++++++++++++++++++++");
+                String fieldType = field.getType().getName();
+                String fieldName = field.getName();
+                String fieldSignature = field.getSignature();
+                String fieldGenericSignature = field.getGenericSignature();
+
+                System.out.println(
+                    "fieldType = " + fieldType + ", fieldName = " + fieldName + "fieldSignature = "
+                        + fieldSignature + ", fieldGenericSignature = " + fieldGenericSignature
+                        + ", fieldGenericSignature = " + fieldGenericSignature);
+                if (fieldGenericSignature != null) {
+                    String decodedFieldSignature = FQNResolver
+                        .decodeGenericSignature(fieldGenericSignature, false);
+                    fieldFQNList.add(decodedFieldSignature + " " + fieldName);
+                    System.out.println("decodedFieldSignature = " + decodedFieldSignature);
+                } else {
+                    fieldFQNList.add(fieldSignature);
+                }
+                System.out.println("++++++++++++++++++++++");
+            }
+        } catch (NotFoundException e) {
+            e.printStackTrace();
+        }
+        return fieldFQNList;
+    }
+
+    public List<String> getMethodSignatureListByClassFQN(String classFQN) {
+        List<String> methodSignatureList = new ArrayList<>();
+        try {
+            CtClass ctClass = pool.get(classFQN);
+            CtMethod[] ctMethods = ctClass.getDeclaredMethods();
+
+            for (CtMethod ctMethod : ctMethods) {
+                String methodSignature = getDecodedMethodSignature(ctMethod);
+                methodSignatureList.add(methodSignature);
+            }
+
+        } catch (NotFoundException e) {
+            e.printStackTrace();
+        }
+        return methodSignatureList;
+    }
+
+
+    public List<String> getMethodFQNListByClassFQN(String classFQN) {
+        List<String> methodFQNList = new ArrayList<>();
+        try {
+            CtClass ctClass = pool.get(classFQN);
+            CtMethod[] ctMethods = ctClass.getDeclaredMethods();
+            for (CtMethod ctMethod : ctMethods) {
+                String methodFQN = getMethodFQN(ctMethod, ctClass);
+                methodFQNList.add(methodFQN);
+            }
+        } catch (NotFoundException e) {
+            e.printStackTrace();
+        }
+        return methodFQNList;
+    }
+
+    private String getDecodedMethodSignature(CtMethod ctMethod) {
         String methodSignature = ctMethod.getGenericSignature();
 
         if (methodSignature == null) {
@@ -80,7 +146,7 @@ public class JavassistFQNResolver implements FQNResolver {
 
     }
 
-    public String getMethodFQN(CtMethod ctMethod, CtClass ctClass) {
+    private String getMethodFQN(CtMethod ctMethod, CtClass ctClass) {
         String genericSignature = ctMethod.getGenericSignature();
         if (genericSignature == null) {
             return ctMethod.getLongName().replace(",", ", ").replace("$", ".");
